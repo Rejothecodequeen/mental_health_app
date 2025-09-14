@@ -1,0 +1,37 @@
+:root {
+    --mubas-blue: #003366;
+    --mubas-gold: #c9a32b;
+}
+
+body {
+    font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.bg-primary {
+    background-color: var(--mubas-blue) !important;
+}
+
+.btn-primary {
+    background-color: var(--mubas-blue);
+    border-color: var(--mubas-blue);
+}
+
+.btn-primary:hover {
+    background-color: #00254d;
+}
+
+.card-header.bg-primary {
+    background-color: var(--mubas-blue) !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--mubas-gold) !important;
+    color: #000;
+}
+
+a.nav-link {
+    color: #555;
+}
+a.nav-link:hover {
+    color: var(--mubas-blue);
+}
