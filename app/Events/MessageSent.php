@@ -1,19 +1,16 @@
 <?php
-// app/Events/MessageSent.php
 
 namespace App\Events;
 
 use App\Models\Message;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Broadcasting\Channel;
-use Illuminate\Queue\SerializesModels;
-use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Queue\SerializesModels;
 
 class MessageSent implements ShouldBroadcast
 {
-    use Dispatchable, InteractsWithSockets, SerializesModels;
+    use InteractsWithSockets, SerializesModels;
 
     public $message;
 
@@ -22,15 +19,26 @@ class MessageSent implements ShouldBroadcast
         $this->message = $message;
     }
 
+    // Broadcast to both users involved in the chat
     public function broadcastOn()
     {
-        // Private channel specific to receiver
-        return new PrivateChannel('chat.' . $this->message->receiver_id);
+        $sender   = $this->message->sender_id;
+        $receiver = $this->message->receiver_id;
+
+        return [
+            new PrivateChannel("chat." . $sender . "." . $receiver),
+            new PrivateChannel("chat." . $receiver . "." . $sender),
+        ];
     }
 
-    public function broadcastAs()
+    public function broadcastWith()
     {
-        // Event name that matches your JS listener
-        return 'PrivateMessageSent';
+        return [
+            'id'         => $this->message->id,
+            'sender_id'  => $this->message->sender_id,
+            'receiver_id'=> $this->message->receiver_id,
+            'message'    => $this->message->message,
+            'created_at' => $this->message->created_at->toDateTimeString(),
+        ];
     }
 }

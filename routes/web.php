@@ -34,18 +34,21 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/diary/{id}', [DiaryController::class, 'destroy']);
 });
 
+
 Route::middleware('auth')->group(function () {
-    Route::get('/appointments/available/{therapistId}', [AppointmentController::class, 'available']);
-    Route::post('/appointments/book', [AppointmentController::class, 'book']);
-    Route::put('/appointments/{id}/update', [AppointmentController::class, 'update']);
-    Route::delete('/appointments/{id}/cancel', [AppointmentController::class, 'cancel']);
-    Route::get('/appointments/my', [AppointmentController::class, 'myAppointments']);
+    Route::get('/appointments', [AppointmentController::class, 'index'])->name('appointments.index');
+    Route::get('/appointments/create', [AppointmentController::class, 'create'])->name('appointments.create');
+    Route::post('/appointments', [AppointmentController::class, 'store'])->name('appointments.store');
+    Route::get('/appointments/{appointment}/edit', [AppointmentController::class, 'edit'])->name('appointments.edit');
+    Route::put('/appointments/{appointment}', [AppointmentController::class, 'update'])->name('appointments.update');
+    Route::delete('/appointments/{appointment}', [AppointmentController::class, 'destroy'])->name('appointments.destroy');
 });
+
 
 
 Route::middleware('auth')->group(function () {
     Route::get('/chat/{receiverId?}', [MessageController::class, 'chat'])->name('chat');
-    Route::post('/messages', [MessageController::class, 'send']);
+    Route::post('/messages/send', [MessageController::class, 'send']); // fixed
     Route::get('/messages/{receiverId}', [MessageController::class, 'fetch']);
 });
 
