@@ -103,6 +103,42 @@ class MessageController extends Controller
     }
 
     /**
+ * Fetch recent chats (last message per conversation).
+ */
+public function recentChats()
+{
+    $userId = Auth::id();
+
+    // Get latest message per user (conversation partner)
+    $recentChats = Message::selectRaw('
+            CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END as user_id,
+            MAX(created_at) as last_message_time
+        ', [$userId])
+        ->where(function ($q) use ($userId) {
+            $q->where('sender_id', $userId)
+              ->orWhere('receiver_id', $userId);
+        })
+        ->groupBy('user_id')
+        ->orderByDesc('last_message_time')
+        ->with(['sender', 'receiver']) // preload relationships
+        ->get();
+
+    // Attach last message details
+    foreach ($recentChats as $chat) {
+        $chat->last_message = Message::where(function ($q) use ($userId, $chat) {
+                $q->where('sender_id', $userId)->where('receiver_id', $chat->user_id);
+            })->orWhere(function ($q) use ($userId, $chat) {
+                $q->where('sender_id', $chat->user_id)->where('receiver_id', $userId);
+            })
+            ->orderByDesc('created_at')
+            ->first();
+    }
+
+    return response()->json($recentChats);
+}
+
+
+    /**
      * Fetch conversation history between two users.
      */
     public function fetch($receiverId)

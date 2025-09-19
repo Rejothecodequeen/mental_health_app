@@ -9,13 +9,16 @@ use Illuminate\Support\Facades\Storage;
 
 class ResourceController extends Controller
 {
-    // View all resources (for users)
-    public function index() {
-        return response()->json(Resource::latest()->get());
+    // View all resources (for Blade page)
+    public function index()
+    {
+        $resources = Resource::latest()->get();
+        return view('resources.index', compact('resources')); // pass to Blade
     }
 
     // Upload new resource (therapists only)
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         $request->validate([
             'title' => 'required|string|max:255',
             'type' => 'required|string',
@@ -37,15 +40,17 @@ class ResourceController extends Controller
             'uploaded_by' => Auth::id(),
         ]);
 
-        return response()->json(['message' => 'Resource uploaded successfully!', 'resource' => $resource]);
+        // Redirect back to resources page instead of returning JSON
+        return redirect()->route('resources.index')->with('success', 'Resource uploaded successfully!');
     }
 
     // Delete resource (therapist only)
-    public function destroy($id) {
+    public function destroy($id)
+    {
         $resource = Resource::findOrFail($id);
 
         if ($resource->uploaded_by != Auth::id()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            return redirect()->route('resources.index')->with('error', 'Unauthorized');
         }
 
         if ($resource->file_path) {
@@ -54,6 +59,12 @@ class ResourceController extends Controller
 
         $resource->delete();
 
-        return response()->json(['message' => 'Resource deleted successfully!']);
+        return redirect()->route('resources.index')->with('success', 'Resource deleted successfully!');
+    }
+
+    // Optional: API endpoint for JSON responses (if needed)
+    public function apiIndex()
+    {
+        return response()->json(Resource::latest()->get());
     }
 }

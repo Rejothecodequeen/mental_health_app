@@ -23,6 +23,9 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        // Define a gate to check if the user is a therapist
+        Gate::define('isTherapist', function ($user) {
+            return $user->role === 'therapist';
+        });
     }
 }

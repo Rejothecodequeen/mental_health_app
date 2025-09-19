@@ -2,25 +2,31 @@
 
 @section('content')
 <div class="d-flex" style="height: 100vh;">
-    <div class="sidebar">
-        <h3>Users</h3>
-        <ul id="user-list" style="list-style:none; padding:0;">
+
+    <!-- Sidebar: Users -->
+    <div class="sidebar p-3 border-end" style="width: 280px; background: #f8f9fa;">
+        <h4 class="mb-3">Users</h4>
+        <input type="text" id="searchUser" class="form-control mb-3 rounded-pill" placeholder="Search users...">
+        <ul id="user-list" class="list-unstyled" style="padding-left: 0;">
             @foreach($users as $u)
-                <li class="user d-flex align-items-center justify-content-between" data-id="{{ $u->id }}">
-                    <a href="{{ route('chat', $u->id) }}">{{ $u->name }}</a>
+                <li class="user d-flex align-items-center justify-content-between p-2 rounded mb-1" 
+                    data-id="{{ $u->id }}" style="cursor:pointer; transition: background 0.2s;">
+                    <span>{{ $u->name }}</span>
                     <span class="status-dot offline"></span>
                 </li>
             @endforeach
-            <li class="user d-flex align-items-center justify-content-between" data-id="0">
-                <a href="#">Mental Health Bot</a>
+            <li class="user d-flex align-items-center justify-content-between p-2 rounded mb-1" 
+                data-id="0" style="cursor:pointer; transition: background 0.2s;">
+                <span>Mental Health Bot</span>
                 <span class="status-dot online"></span>
             </li>
         </ul>
     </div>
 
-    <div class="chat flex-fill d-flex flex-column">
-        <div class="messages flex-fill d-flex flex-column" id="messages" style="overflow-y:auto;"></div>
-        <div class="input-area d-flex p-2 bg-light">
+    <!-- Chat Area -->
+    <div class="chat flex-fill d-flex flex-column border-start">
+        <div class="messages flex-fill p-3" id="messages" style="overflow-y:auto; background: #f9f9f9;"></div>
+        <div class="input-area d-flex p-3 bg-white border-top">
             <input id="message" type="text" placeholder="Type a message..." class="flex-fill form-control me-2 rounded-pill">
             <button id="send" class="btn btn-primary rounded-pill">Send</button>
         </div>
@@ -28,8 +34,6 @@
 </div>
 
 @vite('resources/js/app.js')
-
-<!-- Marked.js for Markdown parsing -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <script>
@@ -39,11 +43,36 @@ const authId = {{ Auth::id() }};
 let receiverId = null;
 let currentChannel = null;
 
-// Append message helper (with Markdown support)
+// Append message with proper bubble styling
 function appendMessage(sender, text) {
     const div = document.createElement("div");
-    div.classList.add("message", sender === authId ? "me" : "other");
-    // Parse markdown → HTML
+    div.classList.add("message");
+
+    div.style.maxWidth = "70%";
+    div.style.wordWrap = "break-word";
+    div.style.padding = "10px 15px";
+    div.style.margin = "5px 0";
+    div.style.borderRadius = "20px";
+    div.style.boxShadow = "0 1px 2px rgba(0,0,0,0.1)";
+    div.style.display = "inline-block";
+    
+    if(sender === authId){
+        div.style.alignSelf = "flex-end";
+        div.style.background = "#0078ff";
+        div.style.color = "#fff";
+        div.style.borderBottomRightRadius = "5px";
+    } else if(sender === 0) { // bot
+        div.style.alignSelf = "flex-start";
+        div.style.background = "#6f42c1"; // bot purple
+        div.style.color = "#fff";
+        div.style.borderBottomLeftRadius = "5px";
+    } else {
+        div.style.alignSelf = "flex-start";
+        div.style.background = "#e5e5ea";
+        div.style.color = "#000";
+        div.style.borderBottomLeftRadius = "5px";
+    }
+
     div.innerHTML = marked.parse(text);
     messagesList.appendChild(div);
     messagesList.scrollTop = messagesList.scrollHeight;
@@ -52,16 +81,11 @@ function appendMessage(sender, text) {
 // Subscribe to a private chat channel
 function joinChannel() {
     if (!receiverId || receiverId === 0) return; // Bot messages do not use Echo
-
-    if (currentChannel) {
-        window.Echo.leaveChannel(currentChannel);
-    }
+    if (currentChannel) window.Echo.leaveChannel(currentChannel);
 
     currentChannel = `chat.${receiverId}.${authId}`;
     window.Echo.private(currentChannel)
-        .listen('MessageSent', e => {
-            appendMessage(e.message.sender_id, e.message.message);
-        });
+        .listen('MessageSent', e => appendMessage(e.message.sender_id, e.message.message));
 }
 
 // Click user to select chat
@@ -84,9 +108,9 @@ document.querySelectorAll('.user').forEach(u => {
 });
 
 // Send message
-document.getElementById("send").addEventListener("click", async () => {
+async function sendMessage() {
     const text = messageInput.value.trim();
-    if (!text || receiverId === null) return;
+    if(!text || receiverId === null) return;
 
     appendMessage(authId, text);
     messageInput.value = "";
@@ -101,65 +125,72 @@ document.getElementById("send").addEventListener("click", async () => {
     });
 
     const data = await res.json();
-    if (data.bot_message) {
-        appendMessage(0, data.bot_message.message);
+    if(data.bot_message) appendMessage(0, data.bot_message.message);
+}
+
+// Click send button
+document.getElementById("send").addEventListener("click", sendMessage);
+
+// Press Enter to send
+messageInput.addEventListener("keydown", function(e){
+    if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        sendMessage();
     }
 });
 
 // Presence channel
-if (window.Echo) {
+if(window.Echo){
     window.Echo.join('online')
         .here(users => users.forEach(u => updateStatus(u.id, true)))
         .joining(user => updateStatus(user.id, true))
         .leaving(user => updateStatus(user.id, false));
 }
 
-function updateStatus(userId, isOnline) {
+function updateStatus(userId, isOnline){
     const dot = document.querySelector(`.user[data-id="${userId}"] .status-dot`);
-    if (dot) {
+    if(dot){
         dot.classList.remove("online", "offline");
         dot.classList.add(isOnline ? "online" : "offline");
     }
 }
+
+// Search users
+document.getElementById("searchUser").addEventListener("input", function(){
+    const query = this.value.toLowerCase();
+    document.querySelectorAll('#user-list .user').forEach(user => {
+        const name = user.querySelector('span').innerText.toLowerCase();
+        user.style.display = name.includes(query) ? 'flex' : 'none';
+    });
+});
 </script>
 
 <style>
-.message { 
-    max-width: 60%; 
-    padding: 10px 15px; 
-    margin: 5px 0; 
-    border-radius: 18px; 
-    font-size: 14px; 
-    line-height: 1.4; 
-    display: inline-block; 
-    clear: both; 
-}
-.message.me { 
-    align-self: flex-end; 
-    background: #0078ff; 
-    color: #fff; 
-    border-bottom-right-radius: 5px; 
-}
-.message.other { 
-    align-self: flex-start; 
-    background: #e5e5ea; 
-    color: #000; 
-    border-bottom-left-radius: 5px; 
+.messages {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background: #f9f9f9;
 }
 
-/* Style lists and formatting inside messages */
-.message ul, .message ol {
-    margin: 5px 0 5px 20px;
-    padding: 0;
+/* Scrollbar styling */
+.messages::-webkit-scrollbar {
+    width: 6px;
 }
-.message strong {
-    font-weight: bold;
-}
-.message em {
-    font-style: italic;
+.messages::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.2);
+    border-radius: 3px;
 }
 
-.status-dot { width: 10px; height: 10px; border-radius: 50%; margin-left: 5px; }
+/* User sidebar hover */
+.user:hover {
+    background: #e2e6ea;
+}
+
+.status-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%; margin-left: 5px;
+}
 .online { background: #28a745; }
 .offline { background: #ccc; }
 </style>

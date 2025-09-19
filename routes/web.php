@@ -11,14 +11,23 @@ use App\Http\Controllers\DiaryController;
 use App\Http\Controllers\ResourceController;
 
 
+use App\Http\Controllers\UserController;
+
+Route::middleware('auth')->group(function () {
+    Route::get('/users/search', [UserController::class, 'search'])->name('users.search');
+});
 
 
 
 Route::middleware('auth')->group(function () {
     // Resources
-    Route::get('/resources', [ResourceController::class, 'index']);
-    Route::post('/resources', [ResourceController::class, 'store'])->middleware('can:isTherapist');
-    Route::delete('/resources/{id}', [ResourceController::class, 'destroy'])->middleware('can:isTherapist');
+    Route::get('/resources', [ResourceController::class, 'index'])->name('resources.index');
+    Route::post('/resources', [ResourceController::class, 'store'])
+        ->middleware('can:isTherapist')
+        ->name('resources.store');
+    Route::delete('/resources/{id}', [ResourceController::class, 'destroy'])
+        ->middleware('can:isTherapist')
+        ->name('resources.destroy');
 });
 
 // Blade view (requires login)
@@ -45,11 +54,18 @@ Route::middleware('auth')->group(function () {
 });
 
 
-
 Route::middleware('auth')->group(function () {
+    // Chat view (with optional receiver)
     Route::get('/chat/{receiverId?}', [MessageController::class, 'chat'])->name('chat');
-    Route::post('/messages/send', [MessageController::class, 'send']); // fixed
+
+    // Send a message
+    Route::post('/messages/send', [MessageController::class, 'send']);
+
+    // Fetch full conversation with a user
     Route::get('/messages/{receiverId}', [MessageController::class, 'fetch']);
+
+    // 🔥 Fetch recent chats (last message per conversation)
+    Route::get('/messages/recent', [MessageController::class, 'recentChats']);
 });
 
 
